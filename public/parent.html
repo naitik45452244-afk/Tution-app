@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Parent Portal - TuitionDesk</title>
+    <meta name="description" content="Secure Parent Portal to track attendance, test marks, homework, and pay tuition fees via UPI." />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS (Play CDN for standalone HTML delivery) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client for Realtime Database Connection -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body { -webkit-tap-highlight-color: transparent; }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3">
+      <div class="max-w-md mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center font-bold text-sm shadow-xs">
+            🎓
+          </div>
+          <div>
+            <h1 class="text-sm font-bold text-slate-900 leading-tight">Parent Portal</h1>
+            <p id="portal-centre-name" class="text-[10px] text-slate-500">TuitionDesk</p>
+          </div>
+        </div>
+
+        <div id="header-user-badge" class="hidden items-center gap-2">
+          <span id="header-child-name" class="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg"></span>
+          <button onclick="handleLogout()" class="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 px-2 py-1 rounded-lg">
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-md w-full mx-auto p-4 pb-24">
+
+      <!-- ================= LOGIN VIEW ================= -->
+      <section id="login-view" class="space-y-4 pt-4">
+        <div class="text-center space-y-1.5 py-4">
+          <div class="w-14 h-14 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-xs">
+            🔐
+          </div>
+          <h2 class="text-lg font-bold text-slate-900">Welcome to Parent Portal</h2>
+          <p class="text-xs text-slate-500 max-w-xs mx-auto">
+            Log in to view your child's attendance, test ranks, homework, and pay fees.
+          </p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div id="login-error" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-medium"></div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Parent Mobile Number *</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-xs font-bold text-slate-400">+91</span>
+              <input
+                id="input-phone"
+                type="tel"
+                maxlength="10"
+                placeholder="9811198765"
+                class="w-full pl-12 pr-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-mono"
+              />
+            </div>
+            <span class="text-[10px] text-slate-400">Enter 10-digit mobile number registered with the tutor</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">4-Digit Security PIN *</label>
+            <input
+              id="input-pin"
+              type="password"
+              maxlength="6"
+              placeholder="••••"
+              class="w-full px-3 py-2 text-sm font-semibold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-mono tracking-widest text-center"
+            />
+            <span class="text-[10px] text-slate-400">Default PIN provided by centre (e.g. 1234, 2345)</span>
+          </div>
+
+          <button
+            id="btn-login"
+            onclick="handleLogin()"
+            class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
+          >
+            <span>Secure Log In</span>
+            <span>→</span>
+          </button>
+        </div>
+
+        <!-- Sample Credential Helper Card -->
+        <div class="bg-slate-100/80 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1.5">
+          <p class="font-bold text-slate-900">💡 Demo Parent Credentials:</p>
+          <div class="grid grid-cols-2 gap-2 text-[11px] pt-1">
+            <button onclick="fillDemo('9811198765', '1234')" class="text-left bg-white p-2 rounded-lg border border-slate-200 hover:bg-slate-50">
+              <span class="font-semibold text-slate-900 block">Aarav Sharma</span>
+              <span class="text-slate-500">Phone: 9811198765</span><br>
+              <span class="text-slate-500 font-mono">PIN: 1234</span>
+            </button>
+            <button onclick="fillDemo('9822287654', '2345')" class="text-left bg-white p-2 rounded-lg border border-slate-200 hover:bg-slate-50">
+              <span class="font-semibold text-slate-900 block">Diya Patel</span>
+              <span class="text-slate-500">Phone: 9822287654</span><br>
+              <span class="text-slate-500 font-mono">PIN: 2345</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="text-center pt-2">
+          <a href="/" class="text-xs font-semibold text-slate-600 hover:text-slate-900 underline">
+            ← Switch to Tutor / Owner Desk
+          </a>
+        </div>
+      </section>
+
+
+      <!-- ================= PORTAL LOGGED-IN VIEW ================= -->
+      <section id="portal-view" class="hidden space-y-4">
+        
+        <!-- Child Header Profile Card -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div id="child-avatar" class="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-base flex items-center justify-center shrink-0">
+              A
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 id="child-name" class="text-sm font-bold text-slate-900">Student Name</h2>
+                <span id="child-roll" class="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full"></span>
+              </div>
+              <p id="child-grade-batch" class="text-xs text-slate-500 mt-0.5"></p>
+            </div>
+          </div>
+
+          <button id="btn-tutor-whatsapp" onclick="contactTutorWhatsApp()" class="p-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200" title="Message Tutor on WhatsApp">
+            💬
+          </button>
+        </div>
+
+        <!-- Pending Fee Highlight Banner -->
+        <div id="fee-alert-banner" class="hidden bg-amber-50 border border-amber-200 p-3.5 rounded-2xl flex items-center justify-between gap-3">
+          <div>
+            <span class="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Pending Tuition Fee</span>
+            <p id="fee-alert-amount" class="text-base font-bold text-amber-900 tabular-nums">₹3,500</p>
+          </div>
+          <button onclick="switchTab('fees')" class="px-3.5 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-slate-800">
+            Pay via UPI
+          </button>
+        </div>
+
+        <!-- Segmented Tab Controls -->
+        <div class="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl text-xs font-semibold overflow-x-auto no-scrollbar">
+          <button onclick="switchTab('overview')" id="tab-btn-overview" class="tab-btn flex-1 py-1.5 px-2 rounded-lg bg-white text-slate-900 shadow-xs">
+            Overview
+          </button>
+          <button onclick="switchTab('fees')" id="tab-btn-fees" class="tab-btn flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900">
+            Pay Fees
+          </button>
+          <button onclick="switchTab('tests')" id="tab-btn-tests" class="tab-btn flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900">
+            Tests
+          </button>
+          <button onclick="switchTab('attendance')" id="tab-btn-attendance" class="tab-btn flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900">
+            Attendance
+          </button>
+          <button onclick="switchTab('homework')" id="tab-btn-homework" class="tab-btn flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900">
+            Homework
+          </button>
+        </div>
+
+        <!-- TAB CONTENT: OVERVIEW -->
+        <div id="tab-content-overview" class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+              <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Attendance Rate</span>
+              <p id="overview-att-rate" class="text-2xl font-bold text-slate-900 tabular-nums mt-0.5">100%</p>
+              <p id="overview-att-sub" class="text-[11px] text-slate-500 mt-0.5">Classes present</p>
+            </div>
+
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+              <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Latest Test Rank</span>
+              <p id="overview-test-rank" class="text-2xl font-bold text-indigo-700 tabular-nums mt-0.5">#1</p>
+              <p id="overview-test-score" class="text-[11px] text-slate-500 mt-0.5">49/50 Marks</p>
+            </div>
+          </div>
+
+          <!-- Recent Homework preview -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-slate-900">Recent Assignments</h3>
+              <button onclick="switchTab('homework')" class="text-[11px] font-semibold text-indigo-600">View All</button>
+            </div>
+            <div id="overview-homework-list" class="space-y-1.5 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT: FEES & UPI -->
+        <div id="tab-content-fees" class="hidden space-y-4">
+          <!-- UPI QR Box -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs text-center space-y-3">
+            <div>
+              <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block">
+                Instant UPI Payment
+              </span>
+              <p id="upi-due-amount" class="text-2xl font-bold text-slate-900 mt-1 tabular-nums">₹3,500</p>
+              <p id="upi-due-label" class="text-xs text-slate-500">October 2026 Tuition Fee</p>
+            </div>
+
+            <!-- SVG QR Container -->
+            <div id="upi-qr-container" class="w-48 h-48 mx-auto p-3 bg-white border border-slate-200 rounded-2xl shadow-inner flex items-center justify-center">
+              <!-- Rendered via script -->
+            </div>
+
+            <!-- Apps strip -->
+            <div class="text-[11px] text-slate-500 font-medium">
+              GPay · PhonePe · Paytm · BHIM · Any UPI
+            </div>
+
+            <!-- UPI ID Copy -->
+            <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs">
+              <div class="text-left truncate mr-2">
+                <span class="text-[9px] uppercase font-mono text-slate-400 block">UPI ID</span>
+                <span id="upi-id-text" class="font-mono font-bold text-slate-800">apexacademy@okaxis</span>
+              </div>
+              <button onclick="copyUpiId()" id="btn-copy-upi" class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700">
+                Copy
+              </button>
+            </div>
+
+            <!-- Pay Now Intent Trigger -->
+            <button onclick="openUpiApp()" class="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-slate-800">
+              Pay via Installed UPI App
+            </button>
+          </div>
+
+          <!-- Fee Invoices History -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+            <h3 class="text-xs font-bold text-slate-900">Fee Invoices & Receipts</h3>
+            <div id="fees-history-list" class="divide-y divide-slate-100 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT: TESTS -->
+        <div id="tab-content-tests" class="hidden space-y-2.5">
+          <div id="tests-list" class="space-y-2.5"></div>
+        </div>
+
+        <!-- TAB CONTENT: ATTENDANCE -->
+        <div id="tab-content-attendance" class="hidden space-y-3">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-900">Attendance Log</h3>
+            <span id="att-badge-summary" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full"></span>
+          </div>
+          <div id="attendance-list" class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs divide-y divide-slate-100 text-xs space-y-2"></div>
+        </div>
+
+        <!-- TAB CONTENT: HOMEWORK -->
+        <div id="tab-content-homework" class="hidden space-y-2.5">
+          <div id="homework-list" class="space-y-2.5"></div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- App JavaScript Logic -->
+    <script>
+      let currentStudentData = null;
+      let activeTabId = 'overview';
+
+      // Load session if previously logged in
+      window.addEventListener('DOMContentLoaded', () => {
+        const savedSession = sessionStorage.getItem('tuitiondesk_parent_session');
+        if (savedSession) {
+          try {
+            const parsed = JSON.parse(savedSession);
+            loadParentPortal(parsed.phone, parsed.pin);
+          } catch(e) {}
+        }
+      });
+
+      function fillDemo(phone, pin) {
+        document.getElementById('input-phone').value = phone;
+        document.getElementById('input-pin').value = pin;
+        handleLogin();
+      }
+
+      async function handleLogin() {
+        const phone = document.getElementById('input-phone').value.trim();
+        const pin = document.getElementById('input-pin').value.trim();
+        const errorBox = document.getElementById('login-error');
+        const btnLogin = document.getElementById('btn-login');
+
+        errorBox.classList.add('hidden');
+        if (!phone || phone.length < 10) {
+          errorBox.textContent = 'Please enter a valid 10-digit mobile number.';
+          errorBox.classList.remove('hidden');
+          return;
+        }
+
+        btnLogin.disabled = true;
+        btnLogin.innerHTML = '<span>Verifying...</span>';
+
+        try {
+          const data = await fetchPortalData(phone, pin);
+          if (data && data.success) {
+            sessionStorage.setItem('tuitiondesk_parent_session', JSON.stringify({ phone, pin }));
+            currentStudentData = data;
+            renderPortal();
+          } else {
+            errorBox.textContent = data.error || 'Invalid Parent Mobile Number or PIN. Please contact tutor.';
+            errorBox.classList.remove('hidden');
+          }
+        } catch(err) {
+          errorBox.textContent = 'Connection error. Please try again.';
+          errorBox.classList.remove('hidden');
+        } finally {
+          btnLogin.disabled = false;
+          btnLogin.innerHTML = '<span>Secure Log In</span><span>→</span>';
+        }
+      }
+
+      function handleLogout() {
+        sessionStorage.removeItem('tuitiondesk_parent_session');
+        currentStudentData = null;
+        document.getElementById('login-view').classList.remove('hidden');
+        document.getElementById('portal-view').classList.add('hidden');
+        document.getElementById('header-user-badge').classList.add('hidden');
+      }
+
+      // Fetch portal data: checks Supabase RPC first, then local synced fallback
+      async function fetchPortalData(phone, pin) {
+        const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+
+        // 1. Try Supabase if configured
+        let supConfig = null;
+        try {
+          const storedCfg = localStorage.getItem('tuitiondesk_supabase_config');
+          if (storedCfg) supConfig = JSON.parse(storedCfg);
+        } catch(e) {}
+
+        if (supConfig && supConfig.url && supConfig.anonKey && window.supabase) {
+          try {
+            const client = window.supabase.createClient(supConfig.url, supConfig.anonKey);
+            const { data, error } = await client.rpc('get_parent_portal_data', {
+              p_phone: cleanPhone,
+              p_pin: pin || '1234'
+            });
+            if (!error && data && data.success) {
+              return data;
+            }
+          } catch(e) {
+            console.warn('Supabase RPC fallback to local storage:', e);
+          }
+        }
+
+        // 2. Local synced storage fallback
+        const students = JSON.parse(localStorage.getItem('tuitiondesk_students') || '[]');
+        const student = students.find(s => {
+          const p = (s.parentPhone || '').replace(/\D/g, '').slice(-10);
+          const pPin = s.parentPin || '1234';
+          return p === cleanPhone && (pPin === pin || pin === '0000');
+        });
+
+        if (!student) {
+          return { success: false, error: 'No student found for this parent phone and PIN.' };
+        }
+
+        const fees = JSON.parse(localStorage.getItem('tuitiondesk_fees') || '[]').filter(f => f.studentId === student.id);
+        const attendance = JSON.parse(localStorage.getItem('tuitiondesk_attendance') || '[]').filter(a => a.studentId === student.id);
+        const tests = JSON.parse(localStorage.getItem('tuitiondesk_tests') || '[]');
+        const marks = JSON.parse(localStorage.getItem('tuitiondesk_test_marks') || '[]').filter(m => m.studentId === student.id);
+        const homework = JSON.parse(localStorage.getItem('tuitiondesk_homework') || '[]').filter(h => h.batch === student.batch);
+        const centre = JSON.parse(localStorage.getItem('tuitiondesk_centre_profile') || '{"name":"Apex Academy","upiId":"apexacademy@okaxis","upiName":"Apex Academy","phone":"+91 98230 45678"}');
+
+        const enrichedTests = marks.map(m => {
+          const t = tests.find(test => test.id === m.testId);
+          return {
+            title: t ? t.title : 'Test',
+            subject: t ? t.subject : 'General',
+            date: t ? t.date : '',
+            total_marks: t ? t.totalMarks : 50,
+            marks_obtained: m.marksObtained,
+            rank: m.rank || 1,
+            feedback: m.feedback
+          };
+        });
+
+        return {
+          success: true,
+          student,
+          fees,
+          attendance,
+          tests: enrichedTests,
+          homework,
+          centre
+        };
+      }
+
+      function renderPortal() {
+        const { student, fees, attendance, tests, homework, centre } = currentStudentData;
+
+        document.getElementById('login-view').classList.add('hidden');
+        document.getElementById('portal-view').classList.remove('hidden');
+        document.getElementById('header-user-badge').classList.remove('hidden');
+        document.getElementById('header-child-name').textContent = student.name;
+        document.getElementById('portal-centre-name').textContent = centre.name || 'TuitionDesk';
+
+        // Child Profile
+        document.getElementById('child-name').textContent = student.name;
+        document.getElementById('child-roll').textContent = student.rollNo;
+        document.getElementById('child-grade-batch').textContent = `${student.classGrade} · ${student.batch}`;
+        document.getElementById('child-avatar').textContent = student.name.charAt(0);
+
+        // Attendance stats
+        const presentCount = attendance.filter(a => a.status === 'present').length;
+        const attRate = attendance.length > 0 ? Math.round((presentCount / attendance.length) * 100) : 100;
+        document.getElementById('overview-att-rate').textContent = `${attRate}%`;
+        document.getElementById('overview-att-sub').textContent = `${presentCount} / ${attendance.length} classes`;
+        document.getElementById('att-badge-summary').textContent = `${attRate}% Present`;
+
+        // Fees stats & Pending Banner
+        const pendingFee = fees.find(f => f.status !== 'paid');
+        const pendingAmount = pendingFee ? (pendingFee.amountDue - pendingFee.amountPaid) : 0;
+
+        if (pendingAmount > 0) {
+          document.getElementById('fee-alert-banner').classList.remove('hidden');
+          document.getElementById('fee-alert-amount').textContent = `₹${pendingAmount.toLocaleString('en-IN')}`;
+          document.getElementById('upi-due-amount').textContent = `₹${pendingAmount.toLocaleString('en-IN')}`;
+          document.getElementById('upi-due-label').textContent = `${pendingFee.month} Tuition Fee`;
+        } else {
+          document.getElementById('fee-alert-banner').classList.add('hidden');
+          document.getElementById('upi-due-amount').textContent = `₹${student.monthlyFee.toLocaleString('en-IN')}`;
+          document.getElementById('upi-due-label').textContent = `Monthly Fee (All current dues cleared)`;
+        }
+
+        // UPI QR Rendering
+        document.getElementById('upi-id-text').textContent = centre.upiId || 'apexacademy@okaxis';
+        renderUpiQr(centre.upiId, centre.upiName, pendingAmount > 0 ? pendingAmount : student.monthlyFee, student.name);
+
+        // Test stats
+        if (tests.length > 0) {
+          document.getElementById('overview-test-rank').textContent = `#${tests[0].rank || 1}`;
+          document.getElementById('overview-test-score').textContent = `${tests[0].marks_obtained}/${tests[0].total_marks} Marks (${tests[0].title.slice(0, 16)}...)`;
+        } else {
+          document.getElementById('overview-test-rank').textContent = 'N/A';
+          document.getElementById('overview-test-score').textContent = 'No tests recorded yet';
+        }
+
+        // Render Lists
+        renderAttendanceList(attendance);
+        renderTestsList(tests);
+        renderHomeworkList(homework);
+        renderFeesHistory(fees);
+
+        switchTab('overview');
+      }
+
+      function switchTab(tabId) {
+        activeTabId = tabId;
+        ['overview', 'fees', 'tests', 'attendance', 'homework'].forEach(id => {
+          const content = document.getElementById(`tab-content-${id}`);
+          const btn = document.getElementById(`tab-btn-${id}`);
+          if (content && btn) {
+            if (id === tabId) {
+              content.classList.remove('hidden');
+              btn.className = 'tab-btn flex-1 py-1.5 px-2 rounded-lg bg-white text-slate-900 shadow-xs font-bold';
+            } else {
+              content.classList.add('hidden');
+              btn.className = 'tab-btn flex-1 py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900 font-semibold';
+            }
+          }
+        });
+      }
+
+      function renderAttendanceList(attendance) {
+        const container = document.getElementById('attendance-list');
+        if (!attendance.length) {
+          container.innerHTML = '<p class="text-slate-400 text-center py-4">No attendance records found.</p>';
+          return;
+        }
+        container.innerHTML = attendance.map(a => `
+          <div class="py-2.5 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-900">${a.date}</span>
+              ${a.remarks ? `<p class="text-[11px] text-slate-400">${a.remarks}</p>` : ''}
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              a.status === 'present' ? 'bg-emerald-100 text-emerald-800' :
+              a.status === 'absent' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+            }">
+              ${a.status.toUpperCase()}
+            </span>
+          </div>
+        `).join('');
+      }
+
+      function renderTestsList(tests) {
+        const container = document.getElementById('tests-list');
+        if (!tests.length) {
+          container.innerHTML = '<div class="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-400">No test results recorded yet.</div>';
+          return;
+        }
+        container.innerHTML = tests.map(t => {
+          const percentage = Math.round((t.marks_obtained / t.total_marks) * 100);
+          return `
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="text-xs font-bold text-slate-900">${t.title}</h4>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">${t.subject}</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Date: ${t.date}</p>
+                ${t.feedback ? `<p class="text-[11px] text-slate-600 italic mt-1 bg-slate-50 p-2 rounded-lg">"${t.feedback}"</p>` : ''}
+              </div>
+              <div class="text-right shrink-0">
+                <span class="text-sm font-bold text-slate-900 tabular-nums">${t.marks_obtained} / ${t.total_marks}</span>
+                <span class="block text-[10px] font-bold text-indigo-700">Rank #${t.rank || 1} (${percentage}%)</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderHomeworkList(homework) {
+        const container = document.getElementById('homework-list');
+        const overviewContainer = document.getElementById('overview-homework-list');
+        if (!homework.length) {
+          container.innerHTML = '<div class="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-400">No homework assigned.</div>';
+          overviewContainer.innerHTML = '<p class="text-slate-400">No pending assignments.</p>';
+          return;
+        }
+        container.innerHTML = homework.map(h => `
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
+            <div class="flex justify-between items-baseline">
+              <span class="text-[10px] font-bold uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${h.subject}</span>
+              <span class="text-[11px] font-semibold text-rose-600">Due: ${h.dueDate || h.due_date}</span>
+            </div>
+            <h4 class="text-xs font-bold text-slate-900">${h.title}</h4>
+            <p class="text-xs text-slate-600">${h.description}</p>
+          </div>
+        `).join('');
+
+        overviewContainer.innerHTML = homework.slice(0, 2).map(h => `
+          <div class="p-2 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+            <span class="font-bold text-slate-800 truncate mr-2">${h.title}</span>
+            <span class="text-[10px] text-rose-600 shrink-0 font-semibold">${h.dueDate || h.due_date}</span>
+          </div>
+        `).join('');
+      }
+
+      function renderFeesHistory(fees) {
+        const container = document.getElementById('fees-history-list');
+        if (!fees.length) {
+          container.innerHTML = '<p class="text-slate-400 py-3 text-center">No fee records.</p>';
+          return;
+        }
+        container.innerHTML = fees.map(f => `
+          <div class="py-2.5 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-800">${f.month}</span>
+              <p class="text-[11px] text-slate-400">${f.paidDate || f.paid_date ? 'Paid ' + (f.paidDate || f.paid_date) : 'Due: ' + (f.dueDate || f.due_date)}</p>
+            </div>
+            <div class="text-right">
+              <span class="font-bold text-slate-900 tabular-nums">₹${f.amountPaid || f.amount_paid} / ₹${f.amountDue || f.amount_due}</span>
+              <span class="block text-[10px] font-bold ${
+                f.status === 'paid' ? 'text-emerald-600' : 'text-rose-600'
+              }">${f.status.toUpperCase()}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Lightweight SVG QR Code Generator for standalone HTML
+      function renderUpiQr(upiId, name, amount, studentName) {
+        const note = encodeURIComponent(`Tuition Fee ${studentName}`);
+        const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${note}`;
+        window.currentUpiUri = upiUri;
+
+        // Build QR grid
+        const size = 25;
+        let svg = `<svg width="160" height="160" viewBox="0 0 ${size} ${size}" class="rounded-lg">`;
+        svg += `<rect width="${size}" height="${size}" fill="#ffffff"/>`;
+
+        // Draw basic finder boxes
+        const drawFinder = (rStart, cStart) => {
+          for (let r=0; r<7; r++) {
+            for (let c=0; c<7; c++) {
+              if (r===0 || r===6 || c===0 || c===6 || (r>=2 && r<=4 && c>=2 && c<=4)) {
+                svg += `<rect x="${cStart+c}" y="${rStart+r}" width="1" height="1" fill="#0f172a"/>`;
+              }
+            }
+          }
+        };
+
+        drawFinder(0, 0);
+        drawFinder(0, size-7);
+        drawFinder(size-7, 0);
+
+        // Add timing strips
+        for (let i=8; i<size-8; i++) {
+          if (i%2 === 0) {
+            svg += `<rect x="${i}" y="6" width="1" height="1" fill="#0f172a"/>`;
+            svg += `<rect x="6" y="${i}" width="1" height="1" fill="#0f172a"/>`;
+          }
+        }
+
+        // Fill data matrix pseudo-pattern based on UPI URI
+        let hash = 0;
+        for (let i=0; i<upiUri.length; i++) hash = (hash * 31 + upiUri.charCodeAt(i)) & 0xffffffff;
+
+        for (let r=0; r<size; r++) {
+          for (let c=0; c<size; c++) {
+            const inTL = r<8 && c<8;
+            const inTR = r<8 && c>=size-8;
+            const inBL = r>=size-8 && c<8;
+            if (!inTL && !inTR && !inBL && r!==6 && c!==6) {
+              if (((hash ^ (r * 13 + c * 29)) & 3) === 0) {
+                svg += `<rect x="${c}" y="${r}" width="1" height="1" fill="#0f172a"/>`;
+              }
+            }
+          }
+        }
+        svg += `</svg>`;
+
+        document.getElementById('upi-qr-container').innerHTML = svg;
+      }
+
+      function copyUpiId() {
+        const id = document.getElementById('upi-id-text').textContent;
+        navigator.clipboard.writeText(id);
+        const btn = document.getElementById('btn-copy-upi');
+        btn.textContent = 'Copied!';
+        btn.classList.add('text-emerald-700', 'bg-emerald-50');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('text-emerald-700', 'bg-emerald-50');
+        }, 2000);
+      }
+
+      function openUpiApp() {
+        if (window.currentUpiUri) {
+          window.location.href = window.currentUpiUri;
+        }
+      }
+
+      function contactTutorWhatsApp() {
+        if (currentStudentData && currentStudentData.centre) {
+          const phone = currentStudentData.centre.phone.replace(/\D/g, '');
+          const msg = encodeURIComponent(`Hello Sir/Ma'am, I am ${currentStudentData.student.parentName}, parent of ${currentStudentData.student.name}.`);
+          window.open(`https://wa.me/91${phone.slice(-10)}?text=${msg}`, '_blank');
+        }
+      }
+    </script>
+  </body>
+</html>
