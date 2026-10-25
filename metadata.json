@@ -1,0 +1,8 @@
+{
+  "name": "TuitionDesk - Tuition Centre Management & Parent Portal",
+  "description": "Mobile-first tuition centre management app for Indian coaching classes with fees tracking, WhatsApp reminders, attendance alerts, test ranks, UPI payments, and secure parent portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
